@@ -123,7 +123,7 @@ client.on("messageCreate", async (message) => {
 		try {
 			const filter = (m) => m.author.id === message.author.id;
 
-			const text = args.slice(1).join(" ");
+			//const text = args.slice(1).join(" ");
 
 			message.channel.send(
 				"Please enter the category id for the tickets to go too!"
@@ -147,7 +147,7 @@ client.on("messageCreate", async (message) => {
 
 			let ticketembed = new MessageEmbed()
 				.setDescription(
-					`${text}. \n Server Ticket: A Ticket in this server \n Dm/Pm Ticket: A Ticket sent to your Dms/Pms \n Select a option Below!`
+					`department: ${dep}. \n Server Ticket: A Ticket in this server \n Dm/Pm Ticket: A Ticket sent to your Dms/Pms \n Select a option Below!`
 				)
 				.setColor("RANDOM");
 
