@@ -1,0 +1,7 @@
+*node_modules
+*secure
+config.js
+*.zip
+yarn.lock
+yarn-error.log
+.env
