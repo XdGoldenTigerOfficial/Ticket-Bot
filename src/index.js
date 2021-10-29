@@ -62,6 +62,7 @@ client.on("ready", async () => {
 
 //message event
 client.on("messageCreate", async (message) => {
+	if (message.author.bot) return;
 	client.config = {
 		prefix,
 		version,
