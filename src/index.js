@@ -1,4 +1,11 @@
-const { Client, Intents, Collection, MessageEmbed } = require("discord.js");
+const {
+	Client,
+	Intents,
+	Collection,
+	MessageEmbed,
+	MessageButton,
+	MessageActionRow,
+} = require("discord.js");
 // the new client format
 const db = require("../database");
 const mongoose = require("mongoose");
@@ -107,6 +114,71 @@ client.on("messageCreate", async (message) => {
 			.setColor("RANDOM");
 
 		return botMsg.edit({ content: " ", embeds: [embed] });
+	}
+
+	if (
+		args[0].toLocaleLowerCase() === `setup` &&
+		message.member.roles.cache.find((r) => r.name === process.env.staff)
+	) {
+		try {
+			const filter = (m) => m.author.id === message.author.id;
+
+			const text = args.slice(1).join(" ");
+
+			message.channel.send(
+				"Please enter the category id for the tickets to go too!"
+			);
+			const catId = await message.channel
+				.awaitMessages({
+					filter,
+					max: 1,
+					time: 30000,
+					errors: ["time"],
+				})
+				.first().content;
+			const catChan = client.channels.cache.get(catId);
+
+			message.channel.send(
+				"Please enter the Department for the tickets to go too!"
+			);
+			const dep = await message.channel
+				.awaitMessages({ filter, max: 1 })
+				.first().content;
+
+			let ticketembed = new MessageEmbed()
+				.setDescription(
+					`${text}. \n Server Ticket: A Ticket in this server \n Dm/Pm Ticket: A Ticket sent to your Dms/Pms \n Select a option Below!`
+				)
+				.setColor("RANDOM");
+
+			let button = new MessageButton()
+				.setCustomId("1")
+				.setLabel("Open A Server Ticket!")
+				.setStyle("SUCCESS");
+			let button2 = new MessageButton()
+				.setStyle("SUCCESS")
+				.setLabel("Open a Dm/Pm Ticket!")
+				.setCustomId("6");
+			let row = new MessageActionRow.addComponents(button, button2);
+			const msg = await message.channel.send({
+				embeds: [ticketembed],
+				components: [row],
+			});
+
+			if (msg && catChan) {
+				const ticketConfig = TicketConfig.create({
+					messageId: msg.id,
+					guildId: message.guild.id,
+					parentId: catChan.id,
+					department: dep,
+				});
+				message.channel.send("Successfully added to db!");
+			} else {
+				message.channel.send("ERROR!");
+			}
+		} catch (error) {
+			console.log(error);
+		}
 	}
 });
 
