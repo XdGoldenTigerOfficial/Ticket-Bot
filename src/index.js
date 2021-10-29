@@ -28,7 +28,7 @@ client.events = new Collection();
 client.commands = new Collection();
 
 //config
-const { prefix, version, mongourl } = require("../config");
+const { prefix, version, mongourl, staff } = require("../config");
 //token
 const { token } = require("../secure/token");
 
@@ -118,7 +118,7 @@ client.on("messageCreate", async (message) => {
 
 	if (
 		args[0].toLocaleLowerCase() === `setup` &&
-		message.member.roles.cache.find((r) => r.name === process.env.staff)
+		message.member.roles.cache.find((r) => r.name === staff)
 	) {
 		try {
 			const filter = (m) => m.author.id === message.author.id;
@@ -135,7 +135,9 @@ client.on("messageCreate", async (message) => {
 					time: 30000,
 					errors: ["time"],
 				})
-				.first().content;
+				.then((collected) => {
+					return collected.first().content;
+				});
 			const catChan = client.channels.cache.get(catId);
 
 			message.channel.send(
@@ -143,11 +145,13 @@ client.on("messageCreate", async (message) => {
 			);
 			const dep = await message.channel
 				.awaitMessages({ filter, max: 1 })
-				.first().content;
+				.then((collected) => {
+					return collected.first().content;
+				});
 
 			let ticketembed = new MessageEmbed()
 				.setDescription(
-					`department: ${dep}. \n Server Ticket: A Ticket in this server \n Dm/Pm Ticket: A Ticket sent to your Dms/Pms \n Select a option Below!`
+					`Department: ${dep}. \n Server Ticket: A Ticket in this server \n Dm/Pm Ticket: A Ticket sent to your Dms/Pms \n Select a option Below!`
 				)
 				.setColor("RANDOM");
 
@@ -156,10 +160,10 @@ client.on("messageCreate", async (message) => {
 				.setLabel("Open A Server Ticket!")
 				.setStyle("SUCCESS");
 			let button2 = new MessageButton()
-				.setStyle("SUCCESS")
+				.setStyle("PRIMARY")
 				.setLabel("Open a Dm/Pm Ticket!")
 				.setCustomId("6");
-			let row = new MessageActionRow.addComponents(button, button2);
+			let row = new MessageActionRow().addComponents(button, button2);
 			const msg = await message.channel.send({
 				embeds: [ticketembed],
 				components: [row],
