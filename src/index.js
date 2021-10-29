@@ -1,5 +1,6 @@
 const { Client, Intents, Collection, MessageEmbed } = require("discord.js");
 // the new client format
+const db = require("./database");
 
 const client = new Client({
 	partials: ["MESSAGE", "CHANNEL", "REACTION"],
@@ -44,6 +45,19 @@ mongoose
 
 client.on("ready", async () => {
 	await client.events.get("ready").execute(version, client);
+
+	db.authenticate()
+		.then(async () => {
+			console.log("Connected to DataBase!");
+			Ticket.init(db);
+			DMTicket.init(db);
+			TicketConfig.init(db);
+			Ticket.sync();
+			DMTicket.sync();
+			TicketConfig.sync();
+			console.log("Completed!");
+		})
+		.catch((err) => error(err));
 });
 
 //message event
