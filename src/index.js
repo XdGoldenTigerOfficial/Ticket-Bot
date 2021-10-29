@@ -1,6 +1,7 @@
 const { Client, Intents, Collection, MessageEmbed } = require("discord.js");
 // the new client format
-const db = require("./database");
+const db = require("../database");
+const mongoose = require("mongoose");
 
 const client = new Client({
 	partials: ["MESSAGE", "CHANNEL", "REACTION"],
@@ -69,6 +70,43 @@ client.on("messageCreate", async (message) => {
 	await client.events
 		.get("messageCreate")
 		.execute(message, client, MessageEmbed);
+
+	if (message.author.bot) return;
+
+	var args = message.content.slice(1).trim().split(" ");
+
+	if (message.content.toLocaleLowerCase() === `${prefix}ping`) {
+		let botMsg = await message.channel.send("〽️ " + "Pinging");
+
+		let b;
+		if (Math.round(client.ws.ping) >= 300) b = "true";
+		if (Math.round(client.ws.ping) < 300) b = "false";
+
+		let d;
+
+		if (Math.round(botMsg.createdAt - message.createdAt) >= 500) d = "true";
+		if (Math.round(botMsg.createdAt - message.createdAt) < 500) d = "false";
+
+		const embed = new MessageEmbed()
+			.setAuthor(client.user.tag, client.user.avatarURL())
+			.setThumbnail(client.user.avatarURL())
+			.setTitle("Pong!")
+			.setTimestamp(message.createdTimestamp)
+			.addField(
+				`Bots Ping`,
+				`🏓${Math.round(botMsg.createdAt - message.createdAt)}ms!🏓 `,
+				false
+			)
+			.addField("Api Ping", `🏓${Math.round(client.ws.ping)}ms!🏓`, true)
+
+			.setFooter(
+				`Requested By: ${message.author.tag}`,
+				message.author.avatarURL({ dynamic: true })
+			)
+			.setColor("RANDOM");
+
+		return botMsg.edit({ content: " ", embeds: [embed] });
+	}
 });
 
 //logs in bot
