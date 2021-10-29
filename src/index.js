@@ -19,7 +19,7 @@ client.events = new Collection();
 client.commands = new Collection();
 
 //config
-const { prefix, version } = require("../config");
+const { prefix, version, mongourl } = require("../config");
 //token
 const { token } = require("../secure/token");
 
@@ -33,6 +33,14 @@ const Ticket = require("./models/Ticket");
 const TicketConfig = require("./models/TicketConfig");
 const DMTicket = require("./models/DmTickets");
 const counts = require("./models/staffcount");
+
+mongoose
+	.connect(mongourl, {
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+		useFindAndModify: true,
+	})
+	.then(console.log("Mongo Activated.. On Bot!"));
 
 client.on("ready", async () => {
 	await client.events.get("ready").execute(version, client);
