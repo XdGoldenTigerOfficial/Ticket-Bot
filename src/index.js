@@ -29,6 +29,11 @@ const { token } = require("../secure/token");
 	require(`./utils/${hand}`)(client);
 });
 
+const Ticket = require("./models/Ticket");
+const TicketConfig = require("./models/TicketConfig");
+const DMTicket = require("./models/DmTickets");
+const counts = require("./models/staffcount");
+
 client.on("ready", async () => {
 	await client.events.get("ready").execute(version, client);
 });
