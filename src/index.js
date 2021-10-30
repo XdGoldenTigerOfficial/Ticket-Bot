@@ -5,6 +5,8 @@ const {
 	MessageEmbed,
 	MessageButton,
 	MessageActionRow,
+	Message,
+	MessageSelectMenu,
 } = require("discord.js");
 // the new client format
 const db = require("../database");
@@ -28,7 +30,14 @@ client.events = new Collection();
 client.commands = new Collection();
 
 //config
-const { prefix, version, mongourl, staff } = require("../config");
+const {
+	prefix,
+	version,
+	mongourl,
+	staff,
+	logo,
+	staffId,
+} = require("../config");
 //token
 const { token } = require("../secure/token");
 
@@ -162,6 +171,7 @@ client.on("messageCreate", async (message) => {
 			let button2 = new MessageButton()
 				.setStyle("PRIMARY")
 				.setLabel("Open a Dm/Pm Ticket!")
+				.setDisabled()
 				.setCustomId("6");
 			let row = new MessageActionRow().addComponents(button, button2);
 			const msg = await message.channel.send({
@@ -183,6 +193,140 @@ client.on("messageCreate", async (message) => {
 		} catch (error) {
 			console.log(error);
 		}
+	}
+});
+
+client.on("interactionCreate", async (interaction) => {
+	interaction.deferReply();
+	interaction.deleteReply();
+
+	if (interaction.isSelectMenu) {
+		switch (interaction.values[0]) {
+			default:
+				interaction.message.channel.send(
+					"Error! This option is disabled or isn't coded  anymore!"
+				);
+				break;
+		}
+	}
+	if (interaction.isButton) {
+		switch (interaction.customId) {
+			case "1":
+				console.log("hello");
+				const ticketConfig = await TicketConfig.findOne({
+					where: { messageId: interaction.message.id },
+				});
+				if (ticketConfig) {
+					const findTicket = await Ticket.findOne({
+						where: { authorId: interaction.user.id, resolved: false },
+					});
+
+					if (findTicket) {
+						let existing = new MessageEmbed()
+							.setAuthor(interaction.guild.name)
+							.setDescription("Error While Making The Ticket (Duplicate)")
+							.addField("Current Ticket:", `<#${findTicket.channelId}>`)
+
+							.setColor("RED")
+							.setThumbnail(interaction.guild.iconURL())
+
+							.setFooter("You have a ticket already", logo);
+						interaction.user.send({ embeds: [existing] });
+					} else {
+						console.log("Making Ticket....");
+						try {
+							const staffrole = interaction.guild.roles.cache.get(staffId);
+							const channel = await interaction.guild.channels.create(
+								"ticket",
+								{
+									parent: await ticketConfig.getDataValue("parentId"),
+									topic: `Department: ${await ticketConfig.getDataValue(
+										"department"
+									)} Type: Server Ticket`,
+									permissionOverwrites: [
+										{ deny: "VIEW_CHANNEL", id: interaction.guild.id },
+										{ allow: "VIEW_CHANNEL", id: user.id },
+										{ allow: "VIEW_CHANNEL", id: staffId },
+									],
+									reason: `${interaction.user.tag} Had Reacted To Open this ticket!`,
+								}
+							);
+							let openembed = new MessageEmbed()
+								.setColor("RANDOM")
+								.setDescription(
+									`Dear ${
+										interaction.user
+									}, \n Your support Ticket has been created. \n Please wait for a member of the Support Team to help you out. \n Department: ${await ticketConfig.getDataValue(
+										"department"
+									)} \n\n Below are ticket options!`
+								);
+
+							let warn = {
+								label: "Transfer Department",
+								value: "TRANS",
+								description: "Transfer to another Department",
+							};
+							let kick = {
+								label: "Send me a copy!",
+								value: "COPY",
+								description: "Will send you a copy of the transcript",
+							};
+							let ban = {
+								label: "Place ong hold/unhold!",
+								value: "HOLD",
+								description: "Will place it on hold or unhold!",
+							};
+							let mute = {
+								label: "Close!",
+								value: "CLOSE",
+								description: "Closes the ticket",
+							};
+							let cancel = {
+								label: "Force Close",
+								value: "STOP",
+								description:
+									"Will bypass transcripts (only staff can use this)",
+							};
+
+							const options = new MessageSelectMenu()
+								.setCustomId("newticket")
+								.setPlaceholder("Chose A Option!")
+								.addOptions([warn, kick, ban, mute, cancel]);
+
+							const row = new MessageActionRow.addComponents(options);
+
+							const msg = await channel.send({
+								embeds: [openembed],
+								components: [row],
+							});
+							msg.pin();
+
+							const ticket = await Ticket.create({
+								authorId: interaction.user.id,
+								channelId: channel.id,
+								guildId: interaction.guild.id,
+								resolved: false,
+								optionsMessageId: msg.id,
+								department: await ticketConfig.getDataValue("department"),
+								original: await ticketConfig.getDataValue("department"),
+							});
+
+							const ticketId = String(ticket.getDataValue("ticketId")).padStart(
+								4,
+								0
+							);
+
+							await channel.edit({ name: `ticket-${ticketId}` });
+						} catch (error) {
+							console.log(error);
+						}
+					}
+				}
+
+				break;
+		}
+	} else {
+		return;
 	}
 });
 

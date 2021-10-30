@@ -4,7 +4,7 @@ module.exports = {
 		console.log(`Ready! On Version: ${version}`);
 
 		client.user.setPresence({
-			activities: [{ name: "Helping with billing!" }],
+			activities: [{ name: "Helping with Tickets!" }],
 		});
 	},
 };
