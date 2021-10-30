@@ -37,6 +37,9 @@ const {
 	staff,
 	logo,
 	staffId,
+	deps,
+	parentid,
+	holdid,
 } = require("../config");
 //token
 const { token } = require("../secure/token");
@@ -125,6 +128,28 @@ client.on("messageCreate", async (message) => {
 		return botMsg.edit({ content: " ", embeds: [embed] });
 	}
 
+	if (args[0].toLocaleLowerCase() === `findoptions`) {
+		const getTicket = await Ticket.findOne({
+			where: { channelId: message.channel.id },
+		});
+
+		const url = `https://discord.com/channels/${
+			message.guild.id
+		}/${await getTicket.channelId}/${await getTicket.optionsMessageId}`;
+		// const url = msg.url; //879859356622000188
+
+		const Button22 = new MessageButton()
+			.setURL(`${url}`)
+			.setStyle("LINK")
+			.setLabel("Options Message");
+
+		const row = new MessageActionRow().addComponents(Button22);
+		message.channel.send({
+			content: "Found One message in this channel with options!",
+			components: [row],
+		});
+	}
+
 	if (
 		args[0].toLocaleLowerCase() === `setup` &&
 		message.member.roles.cache.find((r) => r.name === staff)
@@ -159,21 +184,15 @@ client.on("messageCreate", async (message) => {
 				});
 
 			let ticketembed = new MessageEmbed()
-				.setDescription(
-					`Department: ${dep}. \n Server Ticket: A Ticket in this server \n Dm/Pm Ticket: A Ticket sent to your Dms/Pms \n Select a option Below!`
-				)
+				.setDescription(`Department: ${dep}. \n\n Select a option Below!`)
 				.setColor("RANDOM");
 
 			let button = new MessageButton()
 				.setCustomId("1")
-				.setLabel("Open A Server Ticket!")
+				.setLabel("Open A Ticket!")
 				.setStyle("SUCCESS");
-			let button2 = new MessageButton()
-				.setStyle("PRIMARY")
-				.setLabel("Open a Dm/Pm Ticket!")
-				.setDisabled()
-				.setCustomId("6");
-			let row = new MessageActionRow().addComponents(button, button2);
+
+			let row = new MessageActionRow().addComponents(button);
 			const msg = await message.channel.send({
 				embeds: [ticketembed],
 				components: [row],
@@ -200,15 +219,6 @@ client.on("interactionCreate", async (interaction) => {
 	interaction.deferReply();
 	interaction.deleteReply();
 
-	if (interaction.isSelectMenu) {
-		switch (interaction.values[0]) {
-			default:
-				interaction.message.channel.send(
-					"Error! This option is disabled or isn't coded  anymore!"
-				);
-				break;
-		}
-	}
 	if (interaction.isButton) {
 		switch (interaction.customId) {
 			case "1":
@@ -235,7 +245,6 @@ client.on("interactionCreate", async (interaction) => {
 					} else {
 						console.log("Making Ticket....");
 						try {
-							const staffrole = interaction.guild.roles.cache.get(staffId);
 							const channel = await interaction.guild.channels.create(
 								"ticket",
 								{
@@ -245,7 +254,7 @@ client.on("interactionCreate", async (interaction) => {
 									)} Type: Server Ticket`,
 									permissionOverwrites: [
 										{ deny: "VIEW_CHANNEL", id: interaction.guild.id },
-										{ allow: "VIEW_CHANNEL", id: user.id },
+										{ allow: "VIEW_CHANNEL", id: interaction.user.id },
 										{ allow: "VIEW_CHANNEL", id: staffId },
 									],
 									reason: `${interaction.user.tag} Had Reacted To Open this ticket!`,
@@ -267,15 +276,17 @@ client.on("interactionCreate", async (interaction) => {
 								description: "Transfer to another Department",
 							};
 							let kick = {
-								label: "Send me a copy!",
+								label:
+									"Request a copy of the ticket (NOTE! this will only take effect on close)!",
 								value: "COPY",
 								description: "Will send you a copy of the transcript",
 							};
 							let ban = {
-								label: "Place ong hold/unhold!",
+								label: "Place on hold/unhold!",
 								value: "HOLD",
 								description: "Will place it on hold or unhold!",
 							};
+
 							let mute = {
 								label: "Close!",
 								value: "CLOSE",
@@ -293,7 +304,7 @@ client.on("interactionCreate", async (interaction) => {
 								.setPlaceholder("Chose A Option!")
 								.addOptions([warn, kick, ban, mute, cancel]);
 
-							const row = new MessageActionRow.addComponents(options);
+							const row = new MessageActionRow().addComponents(options);
 
 							const msg = await channel.send({
 								embeds: [openembed],
@@ -309,6 +320,7 @@ client.on("interactionCreate", async (interaction) => {
 								optionsMessageId: msg.id,
 								department: await ticketConfig.getDataValue("department"),
 								original: await ticketConfig.getDataValue("department"),
+								type: "Server Ticket",
 							});
 
 							const ticketId = String(ticket.getDataValue("ticketId")).padStart(
@@ -325,8 +337,134 @@ client.on("interactionCreate", async (interaction) => {
 
 				break;
 		}
-	} else {
-		return;
+	}
+
+	if (interaction.isSelectMenu) {
+		if (interaction.customId !== "newticket") return;
+		const getTicket = await Ticket.findOne({
+			where: { channelId: interaction.message.channel.id },
+		});
+		let warn22 = {
+			label: "Transfer Department",
+			value: "TRANS",
+			description: "Transfer to another Department",
+		};
+		let kick22 = {
+			label:
+				"Request a copy of the ticket (NOTE! this will only take effect on close)!",
+			value: "COPY",
+			description: "Will send you a copy of the transcript",
+		};
+		let ban222 = {
+			label: "Place on hold/unhold!",
+			value: "HOLD",
+			description: "Will place it on hold or unhold!",
+		};
+
+		let mute22 = {
+			label: "Close!",
+			value: "CLOSE",
+			description: "Closes the ticket",
+		};
+		let cancel22 = {
+			label: "Force Close",
+			value: "STOP",
+			description: "Will bypass transcripts (only staff can use this)",
+		};
+
+		const options22 = new MessageSelectMenu()
+			.setCustomId("newticket")
+			.setPlaceholder("Chose A Option!")
+			.addOptions([warn22, kick22, ban222, mute22, cancel22]);
+
+		const row22 = new MessageActionRow().addComponents(options22);
+		interaction.message.edit({ components: [row22] });
+		switch (interaction.values[0]) {
+			case "TRANS":
+				let filter = (r) => r.author.id === interaction.user.id;
+				interaction.message.channel
+					.send(
+						`Please Say a department you would like to transfer to \n allowed departments: ${deps
+							.map((d) => d)
+							.join(", ")}`
+					)
+					.then(async () => {
+						interaction.channel
+							.awaitMessages({ filter, max: 1, time: 30000, errors: ["time"] })
+							.then(async (collected) => {
+								if (!deps.includes(collected.first().content))
+									return interaction.followUp(
+										`Error! Must be one of the following departments \n ${deps
+											.map((d) => d)
+											.join(", ")}`
+									);
+								getTicket.department = collected.first().content;
+								getTicket.save();
+								interaction.message.channel.setTopic(
+									` Department: ${await getTicket.getDataValue(
+										"department"
+									)} Type: ${getTicket.getDataValue("type")}`
+								);
+								let openembed22 = new MessageEmbed()
+									.setColor("RANDOM")
+									.setDescription(
+										`Dear ${
+											interaction.user
+										}, \n Your support Ticket has been created. \n Please wait for a member of the Support Team to help you out. \n Department: ${await getTicket.getDataValue(
+											"department"
+										)} \n\n Below are ticket options!`
+									);
+								interaction.message.edit({ embeds: [openembed22] });
+								interaction.message.channel.send(
+									`Set Department Too ${collected.first().content}!`
+								);
+							})
+							.catch(async (collected) => {
+								console.log(collected);
+								interaction.message.channel.send(
+									"Time Ran out to change department"
+								);
+							});
+					});
+
+				break;
+			case "COPY":
+				if (getTicket.copy) {
+					getTicket.copy = false;
+					getTicket.save();
+					interaction.message.channel.send(
+						`I will No longer remind Staff on close to send you a transcript!`
+					);
+				} else {
+					getTicket.copy = true;
+					getTicket.save();
+					interaction.message.channel.send(
+						"I will remind staff to send you a copy when the ticket closes!"
+					);
+				}
+
+				break;
+			case "HOLD":
+				if (getTicket.hold) {
+					getTicket.hold = false;
+					getTicket.save();
+					interaction.message.channel.send(
+						"Took the hold off the ticket it can now be closed!"
+					);
+				} else {
+					getTicket.hold = true;
+					getTicket.save();
+					interaction.message.channel.send(
+						"Placed the ticket on hold i will prevent it from being closed!"
+					);
+				}
+				break;
+			default:
+				interaction.message.channel.send(
+					"Error! This option is disabled or isn't coded  anymore!"
+				);
+				break;
+		}
 	}
 });
 

@@ -33,6 +33,17 @@ module.exports = class Ticket extends Model {
 				staff: {
 					type: DataTypes.STRING,
 				},
+				type: {
+					type: DataTypes.STRING,
+				},
+				copy: {
+					type: DataTypes.BOOLEAN,
+					defaultValue: false,
+				},
+				hold: {
+					type: DataTypes.BOOLEAN,
+					defaultValue: false,
+				},
 			},
 			{
 				tableName: "Tickets",
