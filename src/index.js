@@ -732,7 +732,13 @@ client.on("interactionCreate", async (interaction) => {
 										`Closed By: ${interaction.user.tag} \n\n Name: ${interaction.channel.name} \n\n Ticket Author: ${member.user.tag} \n\n Stating Department: ${getTicket.original} \n\n Department: ${getTicket.department} \n\n Staff That Interacted: COMING SOON! \n\n Staff Replies: COMING SOON!`
 									);
 
-								logs22.send({ embeds: [embed], components: [row] });
+								if (getTicket.copy)
+									logs22.send({
+										content: `<@&${staffId}> Member Asked for copy of transcript!`,
+										embeds: [embed],
+										components: [row],
+									});
+								else logs22.send({ embeds: [embed], components: [row] });
 
 								interaction.channel.delete();
 							}, 3000);
