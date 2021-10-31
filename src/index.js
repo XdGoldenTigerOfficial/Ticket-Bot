@@ -625,7 +625,7 @@ client.on("interactionCreate", async (interaction) => {
 									guildElement.appendChild(guildImg);
 									guildElement.appendChild(guildText);
 									console.log(guildElement.outerHTML);
-									appendFile(
+									await appendFile(
 										"index.html",
 										guildElement.outerHTML,
 										function (err, data) {}
