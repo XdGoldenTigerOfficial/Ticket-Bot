@@ -7,6 +7,7 @@ const {
 	MessageActionRow,
 	Message,
 	MessageSelectMenu,
+	DiscordAPIError,
 } = require("discord.js");
 // the new client format
 const db = require("../database");
@@ -41,6 +42,7 @@ const {
 	parentid,
 	holdid,
 	logs,
+	transcripts,
 } = require("../config");
 //token
 const { token } = require("../secure/token");
@@ -55,6 +57,11 @@ const Ticket = require("./models/Ticket");
 const TicketConfig = require("./models/TicketConfig");
 const DMTicket = require("./models/DmTickets");
 const counts = require("./models/staffcount");
+const { readFile, writeFile, appendFile, unlinkSync } = require("fs");
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
+const dom = new JSDOM();
+const document = dom.window.document;
 
 mongoose
 	.connect(mongourl, {
@@ -462,6 +469,10 @@ client.on("interactionCreate", async (interaction) => {
 				break;
 			case "STOP":
 				if (interaction.member.roles.cache.get(staffId)) {
+					if (getTicket.hold)
+						return interaction.message.channel.send(
+							"Error! ticket is on hold remove hold b4 force closing a ticket"
+						);
 					const options223 = new MessageSelectMenu()
 						.setCustomId("newticket")
 						.setPlaceholder("Chose A Option!")
@@ -471,30 +482,263 @@ client.on("interactionCreate", async (interaction) => {
 					const row223 = new MessageActionRow().addComponents(options223);
 
 					interaction.message.edit({ components: [row223] });
+					let filter = (r) => r.author.id === interaction.user.id;
+					interaction.message.channel
+						.send(`Please Say a a reason for the force close`)
+						.then(async () => {
+							interaction.channel
+								.awaitMessages({
+									filter,
+									max: 1,
+									time: 30000,
+									errors: ["time"],
+								})
+								.then(async (collected) => {
+									interaction.message.channel.send("Closing Now.....");
 
-					interaction.message.channel.send("Closing Now.....");
+									getTicket.resolved = true;
+									getTicket.save();
 
-					getTicket.resolved = true;
-					getTicket.save();
+									setTimeout(() => {
+										const channel = interaction.guild.channels.cache.get(logs);
 
-					setTimeout(() => {
-						const channel = interaction.guild.channels.cache.get(logs);
+										const forceembed = new MessageEmbed()
+											.setTitle("Forced Closed Ticket")
+											.setDescription(
+												`Ticket forced closed. \n\n Name: ${
+													interaction.channel.name
+												}. \n\n Reason: ${
+													collected.first().content
+												} \n\n Closed By: ${interaction.user}`
+											);
 
-						const forceembed = new MessageEmbed()
-							.setTitle("Forced Closed Ticket")
-							.setDescription(
-								`Ticket forced closed. \n\n Name: ${interaction.channel.name}. \n\n no more info on ticket`
-							);
+										channel.send({ embeds: [forceembed] });
 
-						channel.send({ embeds: [forceembed] });
-
-						interaction.channel.delete();
-					}, 5000);
+										interaction.channel.delete();
+									}, 5000);
+								})
+								.catch(async (collected) => {
+									console.log(collected);
+									interaction.message.channel.send(
+										"Time Ran out to change department"
+									);
+								});
+						});
 				} else {
 					interaction.message.channel.send(
 						"only staff can force close a ticket!"
 					);
 				}
+
+				break;
+			case "CLOSE":
+				if (getTicket.hold)
+					return interaction.message.channel.send(
+						"Error! ticket is on hold remove hold b4 force closing a ticket"
+					);
+				let member = await interaction.guild.members.cache.get(
+					getTicket.authorId
+				);
+				if (!member) {
+					let mute223 = {
+						label: "Close!",
+						value: "CLOSE2",
+
+						description: "Closes the ticket",
+					};
+					const options2233 = new MessageSelectMenu()
+						.setCustomId("newticket")
+						.setPlaceholder("Chose A Option!")
+
+						.addOptions([warn22, kick22, ban222, mute223, cancel22]);
+
+					const row223 = new MessageActionRow().addComponents(options2233);
+					interaction.message.channel.send(
+						"Error! Member not found in server please force close the ticket"
+					);
+					return interaction.message.edit({ components: [row223] });
+				}
+
+				const options2233 = new MessageSelectMenu()
+					.setCustomId("newticket")
+					.setPlaceholder("Chose A Option!")
+					.setDisabled()
+					.addOptions([warn22, kick22, ban222, mute22, cancel22]);
+
+				const row2233 = new MessageActionRow().addComponents(options2233);
+				interaction.message.edit({ components: [row2233] });
+
+				interaction.message.channel.send(
+					"Preparing To close ticket! Please Wait......"
+				);
+
+				setTimeout(async () => {
+					interaction.message.channel.permissionOverwrites.edit(
+						interaction.user,
+						{ VIEW_CHANNEL: false }
+					);
+
+					var tans;
+
+					getTicket.resolved = true;
+					await getTicket.save();
+
+					interaction.channel.send("Logging Channel..... Please Wait.");
+
+					setTimeout(async () => {
+						let test = message.guild.channels.cache.get(transcripts);
+
+						let messageCollection = new Collection();
+
+						let channelMessages = await interaction.channel.messages
+							.fetch({ limit: 100 })
+							.catch((err) => console.log(err));
+
+						messageCollection = messageCollection.concat(channelMessages);
+
+						while (channelMessages.size === 100) {
+							let lastMessageId = channelMessages.lastKey();
+							channelMessages = await interaction.channel.messages
+								.fetch({ limit: 100, before: lastKey() })
+								.catch((err) => console.log(err));
+
+							if (channelMessages)
+								messageCollection = messageCollection.concat(channelMessages);
+						}
+						const ticketId = String(
+							getTicket.getDataValue("ticketId")
+						).padStart(4, 0);
+						let msgs = messageCollection.array().reverse();
+						let data = await readFile(
+							"./template.html",
+							"utf8",
+							function (err, data) {
+								if (data) {
+									writeFile(`./index.html`, data, function (err, data) {});
+									let guildElement = document.createElement("div");
+									let guildText = document.createTextNode(
+										interaction.guild.name
+									);
+									let guildImg = document.createElement("img");
+									guildImg.setAttribute("src", interaction.guild.iconURL());
+									guildImg.setAttribute("width", "150");
+									guildElement.appendChild(guildImg);
+									guildElement.appendChild(guildText);
+									appendFile(
+										"index.html",
+										guildElement.outerHTML,
+										function (err, data) {}
+									);
+
+									msgs.forEach(async (msg) => {
+										let parentContainer = document.createElement("div");
+										parentContainer.className = "parent-container";
+
+										let avatarDIV = document.createElement("div");
+										avatarDIV.className = "avatar-container";
+										let img = document.createElement("img");
+										img.setAttribute(
+											"src",
+											msg.author.avatarURL({ dynamic: true })
+										);
+										img.className = "avatar";
+										avatarDIV.appendChild(img);
+										parentContainer.appendChild(avatarDIV);
+
+										let MessageContainer = document.createElement("div");
+										MessageContainer.className = "message-container";
+
+										let nameElement = document.createElement("span");
+										let name = document.createTextNode(
+											msg.author.tag +
+												` (${msg.author.id} )` +
+												msg.createdAt.tolocaleTimeString() +
+												" EST"
+										);
+
+										nameElement.appendChild(name);
+										MessageContainer.append(nameElement);
+
+										if (msg.content.startsWith("```")) {
+											let m = msg.content.replace(/```/g, "");
+											let codeNode = document.createElement("code");
+											let textNode = document.createTextNode(m);
+											codeNode.appendChild(textNode);
+											messageContainer.appendChild(codeNode);
+										} else {
+											let msgNode = document.createElement("span");
+											let textNode = document.createTextNode(msg.content);
+											msgNode.append(textNode);
+											messageContainer.appendChild(msgNode);
+										}
+										parentContainer.appendChild(MessageContainer);
+										await appendFile(
+											"index.html",
+											parentContainer.outerHTML,
+											function (err, data) {}
+										);
+									});
+
+									interaction.channel.send(
+										"Saving Transcript..... Please Wait!"
+									);
+								} else {
+									console.log("No Data!");
+								}
+							}
+						);
+
+						setTimeout(() => {
+							const path = "../index.html";
+							let me2 = getTicket.authorId;
+							let member = interaction.guild.members.cache.get(me2);
+
+							test
+								.send({
+									files: [
+										{
+											attachment: path,
+											name: `${interaction.channel.name}.html`,
+										},
+									],
+								})
+								.then((msg) => {
+									trans = msg.url;
+								});
+
+							setTimeout(() => {
+								unlinkSync("./index.html");
+							}, 3000);
+
+							interaction.channel.send(
+								"Transcript saved! Closing..... Please Wait!"
+							);
+
+							setTimeout(() => {
+								let logs22 = interaction.guild.channels.cache.get(logs);
+
+								const button = new MessageButton()
+									.setLabel("Transcript")
+									.setURL(trans)
+									.setStyle("LINK");
+
+								const row = new MessageActionRow().addComponents(button);
+
+								const embed = new MessageEmbed()
+									.setTitle("Ticket Closed!")
+									.setColor("RANDOM")
+									.setThumbnail(member.user.avatarURL({ dynamic: true }))
+									.setDescription(
+										`Closed By: ${interaction.user.tag} \n\n Name: ${interaction.channel.name} \n\n Ticket Author: ${member.user.tag} \n\n Stating Department: ${getTicket.original} \n\n Department: ${getTicket.department} \n\n Staff That Interacted: COMING SOON! \n\n Staff Replies: COMING SOON!`
+									);
+
+								logs22.send({ embeds: [embed], components: [row] });
+
+								interaction.channel.delete();
+							}, 3000);
+						}, 5000);
+					}, 5000);
+				}, 2000);
 
 				break;
 			default:

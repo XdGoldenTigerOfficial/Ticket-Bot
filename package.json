@@ -9,8 +9,9 @@
 	"license": "ISC",
 	"dependencies": {
 		"discord.js": "^13.2.0",
+		"fs": "^0.0.1-security",
 		"jsdom": "^18.0.0",
-		"mongoose": "^5.12.13",
+		"mongoose": "5.12.13",
 		"mysql2": "^2.3.2",
 		"sequelize": "^6.8.0"
 	},
