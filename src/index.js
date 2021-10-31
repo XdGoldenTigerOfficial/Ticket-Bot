@@ -40,6 +40,7 @@ const {
 	deps,
 	parentid,
 	holdid,
+	logs,
 } = require("../config");
 //token
 const { token } = require("../secure/token");
@@ -458,6 +459,43 @@ client.on("interactionCreate", async (interaction) => {
 						"Placed the ticket on hold i will prevent it from being closed!"
 					);
 				}
+				break;
+			case "STOP":
+				if (interaction.member.roles.cache.get(staffId)) {
+					const options223 = new MessageSelectMenu()
+						.setCustomId("newticket")
+						.setPlaceholder("Chose A Option!")
+						.setDisabled()
+						.addOptions([warn22, kick22, ban222, mute22, cancel22]);
+
+					const row223 = new MessageActionRow().addComponents(options223);
+
+					interaction.message.edit({ components: [row223] });
+
+					interaction.message.channel.send("Closing Now.....");
+
+					getTicket.resolved = true;
+					getTicket.save();
+
+					setTimeout(() => {
+						const channel = interaction.guild.channels.cache.get(logs);
+
+						const forceembed = new MessageEmbed()
+							.setTitle("Forced Closed Ticket")
+							.setDescription(
+								`Ticket forced closed. \n\n Name: ${interaction.channel.name}. \n\n no more info on ticket`
+							);
+
+						channel.send({ embeds: [forceembed] });
+
+						interaction.channel.delete();
+					}, 5000);
+				} else {
+					interaction.message.channel.send(
+						"only staff can force close a ticket!"
+					);
+				}
+
 				break;
 			default:
 				interaction.message.channel.send(
