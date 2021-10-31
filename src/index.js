@@ -590,75 +590,76 @@ client.on("interactionCreate", async (interaction) => {
 						let test = message.guild.channels.cache.get(transcripts);
 
 						let messageCollection = new Collection();
-
-						let channelMessages = await interaction.channel.messages
-							.fetch({ limit: 100 })
+						let channelMessages = await message.channel.messages
+							.fetch({
+								limit: 100,
+							})
 							.catch((err) => console.log(err));
 
 						messageCollection = messageCollection.concat(channelMessages);
 
 						while (channelMessages.size === 100) {
 							let lastMessageId = channelMessages.lastKey();
-							channelMessages = await interaction.channel.messages
-								.fetch({ limit: 100, before: lastKey() })
+							channelMessages = await message.channel.messages
+								.fetch({ limit: 100, before: lastMessageId })
 								.catch((err) => console.log(err));
-
 							if (channelMessages)
 								messageCollection = messageCollection.concat(channelMessages);
 						}
-						const ticketId = String(
-							getTicket.getDataValue("ticketId")
-						).padStart(4, 0);
-						let msgs = messageCollection.array().reverse();
+						//console.log(messageCollection);
+						// let array = [`${messageCollection[1].map((f) => f).join(", ")}`];
+						let msgs = messageCollection;
 						let data = await readFile(
 							"./template.html",
 							"utf8",
-							function (err, data) {
+							async function (err, data) {
 								if (data) {
-									writeFile(`./index.html`, data, function (err, data) {});
+									writeFile("index.html", data, function (err, data) {});
 									let guildElement = document.createElement("div");
 									let guildText = document.createTextNode(
 										interaction.guild.name
 									);
 									let guildImg = document.createElement("img");
-									guildImg.setAttribute("src", interaction.guild.iconURL());
+									guildImg.setAttribute("src", interaction.guild.iconURL()); //message.guild.iconURL()
 									guildImg.setAttribute("width", "150");
 									guildElement.appendChild(guildImg);
 									guildElement.appendChild(guildText);
+									console.log(guildElement.outerHTML);
 									appendFile(
 										"index.html",
 										guildElement.outerHTML,
 										function (err, data) {}
 									);
-
 									msgs.forEach(async (msg) => {
 										let parentContainer = document.createElement("div");
 										parentContainer.className = "parent-container";
 
-										let avatarDIV = document.createElement("div");
-										avatarDIV.className = "avatar-container";
+										let avatarDiv = document.createElement("div");
+										avatarDiv.className = "avatar-container";
 										let img = document.createElement("img");
 										img.setAttribute(
 											"src",
 											msg.author.avatarURL({ dynamic: true })
 										);
 										img.className = "avatar";
-										avatarDIV.appendChild(img);
-										parentContainer.appendChild(avatarDIV);
+										avatarDiv.appendChild(img);
 
-										let MessageContainer = document.createElement("div");
-										MessageContainer.className = "message-container";
+										parentContainer.appendChild(avatarDiv);
+
+										let messageContainer = document.createElement("div");
+										messageContainer.className = "message-container";
 
 										let nameElement = document.createElement("span");
 										let name = document.createTextNode(
 											msg.author.tag +
-												` (${msg.author.id} )` +
-												msg.createdAt.tolocaleTimeString() +
+												" " +
+												msg.createdAt.toDateString() +
+												" " +
+												msg.createdAt.toLocaleTimeString() +
 												" EST"
 										);
-
 										nameElement.appendChild(name);
-										MessageContainer.append(nameElement);
+										messageContainer.append(nameElement);
 
 										if (msg.content.startsWith("```")) {
 											let m = msg.content.replace(/```/g, "");
@@ -672,7 +673,8 @@ client.on("interactionCreate", async (interaction) => {
 											msgNode.append(textNode);
 											messageContainer.appendChild(msgNode);
 										}
-										parentContainer.appendChild(MessageContainer);
+										parentContainer.appendChild(messageContainer);
+
 										await appendFile(
 											"index.html",
 											parentContainer.outerHTML,
@@ -690,7 +692,7 @@ client.on("interactionCreate", async (interaction) => {
 						);
 
 						setTimeout(() => {
-							const path = "../index.html";
+							const path = "./index.html";
 							let me2 = getTicket.authorId;
 							let member = interaction.guild.members.cache.get(me2);
 
