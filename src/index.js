@@ -224,6 +224,7 @@ client.on("messageCreate", async (message) => {
 });
 
 client.on("interactionCreate", async (interaction) => {
+	const message = interaction.message;
 	interaction.deferReply();
 	interaction.deleteReply();
 
