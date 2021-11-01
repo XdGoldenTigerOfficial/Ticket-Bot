@@ -5,3 +5,5 @@ config.js
 yarn.lock
 yarn-error.log
 .env
+*.sh
+*.exe
