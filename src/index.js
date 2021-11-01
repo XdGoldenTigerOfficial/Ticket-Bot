@@ -43,6 +43,7 @@ const {
 	holdid,
 	logs,
 	transcripts,
+	not,
 } = require("../config");
 //token
 const { token } = require("../secure/token");
@@ -62,6 +63,8 @@ const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 const dom = new JSDOM();
 const document = dom.window.document;
+
+const plugins = require("./models/staffin");
 
 mongoose
 	.connect(mongourl, {
@@ -102,6 +105,95 @@ client.on("messageCreate", async (message) => {
 	if (message.author.bot) return;
 
 	var args = message.content.slice(1).trim().split(" ");
+
+	if (message.channel.name.startsWith("ticket-")) {
+		if (!message.member.roles.cache.has(staffId)) return;
+		const getTicket = await Ticket.findOne({
+			where: { channelId: message.channel.id },
+		});
+
+		var data = await plugins.findOne({
+			ticketId: getTicket.ticketId,
+		});
+		if (!data) {
+			let newData = new plugins({
+				TicketID: getTicket.ticketId,
+			});
+			await newData.save();
+			data = await plugins.findOne({
+				TicketID: getTicket.ticketId,
+			});
+		}
+		var mycount0 = await counts.findOne({
+			TicketID: `${getTicket.ticketId}`,
+		});
+		if (!mycount0) {
+			let newData20 = new counts({
+				TicketID: `${getTicket.ticketId}`,
+				number: 0,
+			});
+			await newData20.save();
+			mycount0 = await counts.findOne({
+				TicketID: `${getTicket.ticketId}`,
+			});
+		}
+		let number0 = mycount0.number;
+		number0++;
+
+		let numberupdated0 = await counts.findOneAndUpdate(
+			{
+				TicketID: `${getTicket.ticketId}`,
+			},
+			{ number: number0 },
+			{ new: true }
+		);
+
+		await numberupdated0.save();
+
+		let array = data.Prefix;
+		if (!array.includes(`${message.author.id}`)) {
+			array.push(message.author.id);
+
+			let doc = await plugins.findOneAndUpdate(
+				{
+					TicketID: getTicket.ticketId,
+				},
+				{ Prefix: array },
+				{ new: true }
+			);
+
+			await doc.save();
+		} else {
+			getTicket.staff = message.author.id;
+
+			await plugins.findOneAndUpdate(
+				{
+					TicketID: getTicket.ticketId,
+				},
+				{ Prefix: [message.author.id] },
+				{ new: true }
+			);
+		}
+		const data222 = await plugins.findOne({
+			TicketID: getTicket.ticketId,
+		});
+
+		message.channel.messages
+			.fetch({ around: getTicket.optionsMessageId, limit: 1 })
+			.then(async (msg) => {
+				let iuser = message.guild.members.cache.get(getTicket.authorId);
+
+				let infoembed = new MessageEmbed().setDescription(
+					`Dear, ${iuser} \n  Your support ticket has been created. \n A Staff Member Is Currently here to help you. \n\n Department: ${await getTicket.getDataValue(
+						"department"
+					)} \n Staff Helping: ${data222.Prefix.map((m) => `\n - <@${m}>`)}`
+				);
+
+				let fecthmsg = msg.first();
+				fecthmsg.edit(infoembed);
+				await getTicket.save();
+			});
+	}
 
 	if (message.content.toLocaleLowerCase() === `${prefix}ping`) {
 		let botMsg = await message.channel.send("〽️ " + "Pinging");
@@ -394,7 +486,7 @@ client.on("interactionCreate", async (interaction) => {
 				interaction.message.channel
 					.send(
 						`Please Say a department you would like to transfer to \n allowed departments: ${deps
-							.map((d) => d)
+							.map((d) => `**${d}**`)
 							.join(", ")}`
 					)
 					.then(async () => {
@@ -404,7 +496,7 @@ client.on("interactionCreate", async (interaction) => {
 								if (!deps.includes(collected.first().content))
 									return interaction.followUp(
 										`Error! Must be one of the following departments \n ${deps
-											.map((d) => d)
+											.map((d) => `**${d}**`)
 											.join(", ")}`
 									);
 								getTicket.department = collected.first().content;
@@ -464,7 +556,7 @@ client.on("interactionCreate", async (interaction) => {
 					getTicket.hold = true;
 					getTicket.save();
 					interaction.message.channel.send(
-						"Placed the ticket on hold i will prevent it from being closed!"
+						"Placed the ticket on hold! I will keep it from being closed!"
 					);
 				}
 				break;
@@ -537,6 +629,24 @@ client.on("interactionCreate", async (interaction) => {
 					return interaction.message.channel.send(
 						"Error! ticket is on hold remove hold b4 force closing a ticket"
 					);
+				const staffdata = await plugins.findOne({
+					TicketID: getTicket.ticketId,
+				});
+
+				var datain;
+
+				if (staffdata) datain = staffdata.Prefix.map((m) => `\n - <@${m}>`);
+				if (!staffdata) datain = "Error Pulling Staff!";
+
+				var datacount;
+
+				const data2340 = await counts.findOne({
+					TicketID: `${getTicket.ticketId}`,
+				});
+
+				if (data2340) datacount = data2340.number;
+				if (!data2340) datacount = "Error Pulling Staff Replies!";
+
 				let member = await interaction.guild.members.cache.get(
 					getTicket.authorId
 				);
@@ -732,12 +842,12 @@ client.on("interactionCreate", async (interaction) => {
 									.setColor("RANDOM")
 									.setThumbnail(member.user.avatarURL({ dynamic: true }))
 									.setDescription(
-										`Closed By: ${interaction.user.tag} \n\n Name: ${interaction.channel.name} \n\n Ticket Author: ${member.user.tag} \n\n Stating Department: ${getTicket.original} \n\n Department: ${getTicket.department} \n\n Staff That Interacted: COMING SOON! \n\n Staff Replies: COMING SOON!`
+										`Closed By: ${interaction.user.tag} \n\n Name: ${interaction.channel.name} \n\n Ticket Author: ${member.user.tag} \n\n Stating Department: ${getTicket.original} \n\n Department: ${getTicket.department} \n\n Staff Replies: ${datacount} \n\n Staff That Interacted: ${datain} `
 									);
 
 								if (getTicket.copy)
 									logs22.send({
-										content: `<@&${staffId}> Member Asked for copy of transcript!`,
+										content: `<@&${not}> Member Asked for copy of transcript!`,
 										embeds: [embed],
 										components: [row],
 									});
