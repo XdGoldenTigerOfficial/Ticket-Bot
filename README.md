@@ -1,7 +1,7 @@
-# Muti Purpus Bot
+# Multi Purpose Bot
 
 ## NOTICE
 
-Please eddit code b4 using it and try to use it for pursinal use only ty
+Please edit code before using it and try to use it for personal use only. Thank You
 
-### files missing on github fdor security reasons
+### files missing in the github for security reasons
