@@ -1,4 +1,4 @@
-# Muti Purpus Bot
+# Multi Purpose Bot
 
 ## NOTICE
 
