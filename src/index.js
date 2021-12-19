@@ -43,7 +43,7 @@ const {
 	holdid,
 	logs,
 	transcripts,
-	not,
+	transcriptPingID,
 } = require("../config");
 //token
 const { token } = require("../secure/token");
@@ -847,7 +847,7 @@ client.on("interactionCreate", async (interaction) => {
 
 								if (getTicket.copy)
 									logs22.send({
-										content: `<@&${not}> Member Asked for copy of transcript!`,
+										content: `<@&${transcriptPingID}> Member Asked for copy of transcript!`,
 										embeds: [embed],
 										components: [row],
 									});
